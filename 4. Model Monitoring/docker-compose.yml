@@ -1,0 +1,45 @@
+version: '3.7'
+
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - 9091:9090
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    user: "472"
+    depends_on:
+      - prometheus
+    ports:
+      - 3000:3000
+    volumes:
+      - ./config/grafana_data:/var/lib/grafana
+      - ./config/grafana_datasources.yml:/etc/grafana/provisioning/datasources/datasource.yml
+
+  evidently_service:
+    build: ./evidently_service
+    depends_on:
+      - grafana
+    ports:
+      - "8085:8085"
+    volumes:
+      - ./evidently_service:/app
+
+  prediction_service:
+    build: ./prediction_service
+    depends_on:
+      - evidently_service
+    ports:
+      - "9696:9696"
+    volumes:
+      - ./prediction_service:/app
